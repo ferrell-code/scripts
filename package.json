@@ -4,7 +4,7 @@
   "repository": "https://github.com/AcalaNetwork/scripts.git",
   "author": "Acala developers <hello@acala.network>",
   "license": "Apache-2.0",
-  "packageManager": "yarn@3.2.0",
+  "packageManager": "yarn@3.2.2",
   "scripts": {
     "lint": "tsc --project . --noEmit && eslint . --ext .js,.ts && prettier -c .",
     "fix": "tsc --project . --noEmit && eslint . --ext .js,.ts --fix && prettier -w .",

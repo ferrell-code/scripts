@@ -62,13 +62,6 @@ runner()
         allPoints[address].percent = allPoints[address].percent + value / total
         allPoints[address].count = allPoints[address].count + 1
       }
-      console.log(
-        era,
-        Array.from(points.individual.keys())
-          .map((x) => x.toHuman())
-          .includes('13mK8AssyPekT5cFuYQ7ijKNXcjHPq8Gnx6TxF5eFCAwoLQ'),
-        allPoints['13mK8AssyPekT5cFuYQ7ijKNXcjHPq8Gnx6TxF5eFCAwoLQ'].count
-      )
     }, 20)
 
     for (let i = 0; i < historyDepth; i++) {

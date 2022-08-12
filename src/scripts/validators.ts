@@ -18,7 +18,7 @@ runner()
     const currentEra = (await api.query.staking.currentEra()).unwrap().toNumber()
     const historyDepth = (await api.query.staking.historyDepth()).toNumber()
 
-    const allPoints = {} as Record<string, Record<number, number> & { sum: number }>
+    const allPoints = {} as Record<string, Record<number, number> & { sum: number; percent: number; count: number }>
 
     const removed: Set<string> = new Set()
 
@@ -47,41 +47,61 @@ runner()
           continue
         }
 
-        allPoints[address] = allPoints[address] || { sum: 0 }
+        allPoints[address] = allPoints[address] || { sum: 0, percent: 0, count: 0 }
         allPoints[address][i] = 0
       }
 
       const points = await api.query.staking.erasRewardPoints(era)
       for (const [addr, v] of points.individual) {
+        const total = points.total.toNumber()
         const address = addr.toHuman()
+        const value = v.toNumber()
         allPoints[address] = allPoints[address] || { sum: 0 }
-        allPoints[address][i] = v.toNumber()
-        allPoints[address].sum = allPoints[address].sum + v.toNumber()
+        allPoints[address][i] = value
+        allPoints[address].sum = allPoints[address].sum + value
+        allPoints[address].percent = allPoints[address].percent + value / total
+        allPoints[address].count = allPoints[address].count + 1
       }
+      console.log(
+        era,
+        Array.from(points.individual.keys())
+          .map((x) => x.toHuman())
+          .includes('13mK8AssyPekT5cFuYQ7ijKNXcjHPq8Gnx6TxF5eFCAwoLQ'),
+        allPoints['13mK8AssyPekT5cFuYQ7ijKNXcjHPq8Gnx6TxF5eFCAwoLQ'].count
+      )
     }, 20)
 
-    for (let i = 0; i <= historyDepth; i++) {
+    for (let i = 0; i < historyDepth; i++) {
       void queue.push(i)
     }
 
-    await queue.empty()
+    await queue.push(historyDepth)
 
     // must be top 30% for overall performance
-    const overallPoints = Object.entries(allPoints).map(([addr, { sum }]) => ({ addr, sum }))
+    const overallPoints = Object.entries(allPoints).map(([addr, { sum, percent, count }]) => ({
+      addr,
+      sum,
+      percent,
+      count,
+    }))
     overallPoints.sort((a, b) => (b.sum || 0) - (a.sum || 0))
-    overallPoints.length = Math.floor(overallPoints.length * 0.3)
+    // overallPoints.length = Math.floor(overallPoints.length * 0.3)
 
-    const final = overallPoints.map((x) => x.addr).filter((x) => !removed.has(x))
+    const final = overallPoints.filter((x) => !removed.has(x.addr))
 
     table(
-      await async.mapLimit(final, 20, async (x: string): Promise<any> => {
-        const iden = await api.derive.accounts.identity(x)
-        const seflStake = (await api.query.staking.ledger(x)).unwrapOrDefault().active.toBigInt()
+      await async.mapLimit(final, 20, async (x: typeof final[number]): Promise<any> => {
+        const addr = x.addr
+        const iden = await api.derive.accounts.identity(addr)
+        const seflStake = (await api.query.staking.ledger(addr)).unwrapOrDefault().active.toBigInt()
         return {
-          address: x,
+          address: addr,
           display: iden.displayParent ? `${iden.displayParent}/${iden.display || ''}` : iden.display,
-          comission: (await api.query.staking.validators(x)).commission.toNumber() / 1e9,
+          comission: (await api.query.staking.validators(addr)).commission.toNumber() / 1e9,
           seflStake: formatBalance(seflStake),
+          totalPoints: x.sum,
+          percent: x.percent / x.count,
+          count: x.count,
         }
       })
     )

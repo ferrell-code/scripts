@@ -1,3 +1,6 @@
+import '@acala-network/types'
+import '@acala-network/types/interfaces/types-lookup'
+
 import { AnyApi } from '@acala-network/sdk-core'
 import { ApiDecoration, ApiTypes } from '@polkadot/api/types'
 import { ApiPromise, ApiRx } from '@polkadot/api'

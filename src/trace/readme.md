@@ -1,0 +1,2 @@
+- `yarn ts-node src/trace/query-events.ts > src/trace/events.json`
+- `yarn ts-node src/trace/trace.ts`

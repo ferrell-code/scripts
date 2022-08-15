@@ -100,7 +100,7 @@ runner()
               data.push({
                 name: 'Debit ' + (tokenNames[currency.toString()] || currency.toString()),
                 token,
-                free: BigInt(debit.toChainData()),
+                free: -BigInt(debit.toChainData()),
               })
             }
             data.push({
@@ -159,7 +159,7 @@ runner()
           if (token === 'AUSD') {
             amountToReclaimFromBalance += diff
             reclaimAusd[name] = (reclaimAusd[name] || 0n) + diff
-          } else if (token.startsWith('Collateral')) {
+          } else if (token.startsWith('Debit')) {
             amountToReclaimFromDebit += diff
           }
         }

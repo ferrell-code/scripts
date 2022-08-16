@@ -59,13 +59,13 @@ export const formatBalance = (x: number | BN | string | FixedPointNumber | bigin
   }
 
   if (config.output === 'console') {
-    if (n > 1e9) {
+    if (n > 1e9 || n < -1e9) {
       return `${formatDecimal(n / 1e9, 2)}B`
     }
-    if (n > 1e6) {
+    if (n > 1e6 || n < -1e6) {
       return `${formatDecimal(n / 1e6, 2)}M`
     }
-    if (n > 1e3) {
+    if (n > 1e3 || n < -1e3) {
       return `${formatDecimal(n / 1e3, 2)}K`
     }
   }

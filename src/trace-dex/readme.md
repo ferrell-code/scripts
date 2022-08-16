@@ -1,0 +1,1 @@
+- `yarn ts-node src/trace-dex/trace-charlie.ts`

@@ -101,9 +101,15 @@ runner()
     const recieverList = new_addresses.map((trace) => trace.endAccount);
     // This second filter will show amount sent to kucoin and module accounts
     let tracedAddresses = result.filter((data) => recieverList.includes(data.sender));
-    //console.log(tracedAddresses);
 
     const kucoin = '23DhqhsKDDpFnH2GreWy7Sk4dqUmGCCVPGk5Lpr84jxzBh5T';
+    /*// Logs all kucoin transfers
+    tracedAddresses.map((val) => {
+      const linkAddress = result.find((data) => val.sender == data.reciever)
+      if (val.reciever == kucoin) {
+        console.log("Linked Malicious Address:", linkAddress?.sender, "\nSender:", val.sender, "\nWho: ", val.reciever, "\nAmount: ", formatBalance(val.amount), "\n")
+      }
+    });*/
 
     let kucoinToBeBurned = BigInt(0);
     for (const data of tracedAddresses) {

@@ -88,21 +88,28 @@ runner()
       '23M5ttkmR6KcnxentoqchgBdUjzMDSzFoUyf5qMs7FsmRMvV',
       '23M5ttkmR6Kco7bReRDve6bQUSAcwqebatp3fWGJYb4hDSDJ',
       '23M5ttkmR6KcnxentoqchgBdUjzMDSzFoUyf5qMs7FsmRMvV', // dex module account
-      '23M5ttkmR6Kco2CnDJKTSdBmBnYpbezUpTMeBsewEsjdui9F'  //aca/fees account
+      '23M5ttkmR6Kco2CnDJKTSdBmBnYpbezUpTMeBsewEsjdui9F',  //aca/fees account
     ] as string[]
 
-    // No multiple hops (don't need recursive search) only sent to Kucoin and one sent to dex
+    // No multiple hops (don't need recursive search) these addresses only sent to Kucoin or module accounts
     // kucoin: 23DhqhsKDDpFnH2GreWy7Sk4dqUmGCCVPGk5Lpr84jxzBh5T
     for (const info of maliciousTransfers) {
       if (!new_addresses.includes(info.reciever.toString()) && !moduleAccounts.includes(info.reciever.toString())) {
         new_addresses.push(info.reciever);
       }
     }
-    //console.log(new_addresses);
 
-    // This second filter only includes kucoin and
-    //let tracedAddresses = result.filter((data) => new_addresses.includes(data.sender));
-    //console.log(tracedAddresses);
+    // This second filter will show amount sent to kucoin and module accounts
+    let tracedAddresses = result.filter((data) => new_addresses.includes(data.sender));
+
+    const kucoin = '23DhqhsKDDpFnH2GreWy7Sk4dqUmGCCVPGk5Lpr84jxzBh5T';
+
+    let kucoinToBeBurned = BigInt(0);
+    for (const data of tracedAddresses) {
+      if (data.reciever == kucoin) {
+        kucoinToBeBurned += data.amount;
+      }
+    }
 
     const queryData = async (block: number, address: string) => {
       const apiAt = await api.at(await api.rpc.chain.getBlockHash(block))
@@ -115,21 +122,25 @@ runner()
     for (const address of new_addresses) {
       const beforeAmount = await queryData(beforeBlock, address);
       const currentAmount = await queryData(blockNow, address);
-      tracedData.push({who: address, before: beforeAmount, now: currentAmount})
+      if (beforeAmount != BigInt(0) || currentAmount != BigInt(0)) {
+        tracedData.push({who: address, before: beforeAmount, now: currentAmount})
+      }
     }
 
-
+    const moonBeam = '23UvQ3ZQXJ5LfTUSYkcRPkQX2FHgcKxGmqdxYJe9j5e3Lwsi';
     console.log("List of malicious addresses that were sent minted AUSD from 16 original wallets:");
-    console.log(new_addresses)
+    console.log(new_addresses.filter((account) => account != moonBeam));
     console.log()
 
-    console.log("Data relating to account that was funded by malicious account in AUSD");
+    console.log("Data relating to account that was funded by malicious account in AUSD\n");
 
-    const moonBeam = '23UvQ3ZQXJ5LfTUSYkcRPkQX2FHgcKxGmqdxYJe9j5e3Lwsi';
     let totalBurned = BigInt(0);
     for (const val of tracedData) {
       const diff = (val.now) - (val.before);
       const printObj = {who: val.who, before: formatBalance(val.before), now: formatBalance(val.now), difference: formatBalance(diff)}
+      if (val.who == moonBeam) {
+        console.log("Moonbeam account: DO NOT BURN\n");
+      }
       table(printObj);
       if (diff > BigInt(0) && val.who != moonBeam) {
         totalBurned += diff;
@@ -137,5 +148,15 @@ runner()
     }
 
     // Dont burn moonbeam by accident
-    console.log('Total AUSD to be Burned:', formatBalance(totalBurned));
+    console.log('Total AUSD to be Burned (Does not include Kucoin or Moonbeam account):', formatBalance(totalBurned), '\n');
+
+    // AUSD sent to kucoin
+    const kucoinBefore = await queryData(beforeBlock, kucoin);
+    const kucoinNow = await queryData(blockNow, kucoin);
+    const kucoinDiff = kucoinNow - kucoinBefore;
+    console.log('Kucoin amount recieved directly from minting accounts:', formatBalance(kucoinToBeBurned));
+    console.log('Kucoin AUSD Balance Now: ', formatBalance(kucoinNow));
+    console.log('Kucoin AUSD Balance Before: ', formatBalance(kucoinBefore));
+    // This will be different as some AUSD would be sent indirectly from minting accounts (dexs etc.)
+    console.log('Kucoin Difference in AUSD: ', formatBalance(kucoinDiff));
   })

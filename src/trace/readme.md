@@ -1,2 +1,2 @@
-- `yarn ts-node src/trace/query-events.ts > src/trace/claim-rewards-events.json`
-- `yarn ts-node src/trace/trace-01.ts`
+- `yarn ts-node src/trace/query-events.ts > src/trace/currenciesEvents.json`
+- `yarn ts-node src/trace/transfer-trace.ts`

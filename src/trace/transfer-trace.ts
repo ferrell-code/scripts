@@ -82,25 +82,26 @@ runner()
     // start of malicious transfer
     let maliciousTransfers = result.filter((data) => mintAddresses.includes(data.sender));
 
-    let new_addresses = [] as string[];
+    let new_addresses = [] as {maliciousOrigin: string, endAccount: string}[];
 
     const moduleAccounts = [
-      '23M5ttkmR6KcnxentoqchgBdUjzMDSzFoUyf5qMs7FsmRMvV',
-      '23M5ttkmR6Kco7bReRDve6bQUSAcwqebatp3fWGJYb4hDSDJ',
+      '23M5ttkmR6Kco7bReRDve6bQUSAcwqebatp3fWGJYb4hDSDJ', // aca/inct module
       '23M5ttkmR6KcnxentoqchgBdUjzMDSzFoUyf5qMs7FsmRMvV', // dex module account
-      '23M5ttkmR6Kco2CnDJKTSdBmBnYpbezUpTMeBsewEsjdui9F',  //aca/fees account
+      '23M5ttkmR6Kco2CnDJKTSdBmBnYpbezUpTMeBsewEsjdui9F'  //aca/fees account
     ] as string[]
 
     // No multiple hops (don't need recursive search) these addresses only sent to Kucoin or module accounts
     // kucoin: 23DhqhsKDDpFnH2GreWy7Sk4dqUmGCCVPGk5Lpr84jxzBh5T
     for (const info of maliciousTransfers) {
-      if (!new_addresses.includes(info.reciever.toString()) && !moduleAccounts.includes(info.reciever.toString())) {
-        new_addresses.push(info.reciever);
+      if (!new_addresses.some((i) => i.endAccount == info.reciever ) && !moduleAccounts.includes(info.reciever.toString())) {
+        new_addresses.push({maliciousOrigin: info.sender, endAccount: info.reciever});
       }
     }
 
+    const recieverList = new_addresses.map((trace) => trace.endAccount);
     // This second filter will show amount sent to kucoin and module accounts
-    let tracedAddresses = result.filter((data) => new_addresses.includes(data.sender));
+    let tracedAddresses = result.filter((data) => recieverList.includes(data.sender));
+    //console.log(tracedAddresses);
 
     const kucoin = '23DhqhsKDDpFnH2GreWy7Sk4dqUmGCCVPGk5Lpr84jxzBh5T';
 
@@ -118,18 +119,18 @@ runner()
     }
 
     // Addresses that recieved AUSD directly from 16 malicious addresses
-    let tracedData: {who: string, before: bigint, now: bigint}[] = [];
+    let tracedData: {maliciousOrigin: string, who: string, before: bigint, now: bigint}[] = [];
     for (const address of new_addresses) {
-      const beforeAmount = await queryData(beforeBlock, address);
-      const currentAmount = await queryData(blockNow, address);
+      const beforeAmount = await queryData(beforeBlock, address.endAccount);
+      const currentAmount = await queryData(blockNow, address.endAccount);
       if (beforeAmount != BigInt(0) || currentAmount != BigInt(0)) {
-        tracedData.push({who: address, before: beforeAmount, now: currentAmount})
+        tracedData.push({maliciousOrigin: address.maliciousOrigin, who: address.endAccount, before: beforeAmount, now: currentAmount})
       }
     }
 
     const moonBeam = '23UvQ3ZQXJ5LfTUSYkcRPkQX2FHgcKxGmqdxYJe9j5e3Lwsi';
     console.log("List of malicious addresses that were sent minted AUSD from 16 original wallets:");
-    console.log(new_addresses.filter((account) => account != moonBeam));
+    console.log(recieverList.filter((account) => account != moonBeam));
     console.log()
 
     console.log("Data relating to account that was funded by malicious account in AUSD\n");
@@ -137,7 +138,7 @@ runner()
     let totalBurned = BigInt(0);
     for (const val of tracedData) {
       const diff = (val.now) - (val.before);
-      const printObj = {who: val.who, before: formatBalance(val.before), now: formatBalance(val.now), difference: formatBalance(diff)}
+      const printObj = {origin: val.maliciousOrigin, who: val.who, before: formatBalance(val.before), now: formatBalance(val.now), difference: formatBalance(diff)}
       if (val.who == moonBeam) {
         console.log("Moonbeam account: DO NOT BURN\n");
       }

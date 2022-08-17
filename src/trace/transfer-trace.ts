@@ -2,12 +2,7 @@ import { readFileSync } from 'fs'
 
 import '@acala-network/types'
 import '@acala-network/type-definitions'
-import {
-  AcalaPrimitivesCurrencyCurrencyId,
-  AcalaPrimitivesTradingPair,
-} from '@acala-network/types/interfaces/types-lookup'
 
-import { FixedPointNumber, Token } from '@acala-network/sdk-core'
 import { Wallet } from '@acala-network/sdk/wallet'
 
 import { formatBalance, table } from '../log'

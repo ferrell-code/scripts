@@ -8,8 +8,8 @@ const main = async () => {
         first: ${pageSize}, offset: $start
         filter: {
           blockNumber: { lessThan: "1639493", greaterThan: "1638215" }
-          section: { equalTo: "incentives" }
-          method: { equalTo: "ClaimRewards" }
+          section: { equalTo: "currencies" }
+          method: { equalTo: "Transferred" }
         }
       ) {
         nodes {
@@ -27,12 +27,13 @@ const main = async () => {
     return data
       .filter(
         (x: { id: string; data: { value: string }[] }) =>
-          x.data[1].value === '{"dex":{"dexShare":[{"token":"AUSD"},{"foreignAsset":3}]}}' &&
-          x.data[2].value === '{"token":"AUSD"}'
+          x.data[0].value === '{"token":"AUSD"}'
       )
-      .map(({ id, data: [who, , , actualAmount] }: any) => ({
+      .map(({ id, data: [token, sender, reciever, actualAmount] }: any) => ({
         id,
-        who: who.value,
+        token: token.value,
+        sender: sender.value,
+        reciever: reciever.value,
         actualAmount: actualAmount.value,
       }))
   }

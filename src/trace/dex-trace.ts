@@ -93,32 +93,6 @@ runner()
       }
     }
 
-    const queryData = async (block: number, address: string) => {
-      const apiAt = await api.at(await api.rpc.chain.getBlockHash(block))
-      let ausdData = await apiAt.query.tokens.accounts(address, stableCurrency.toCurrencyId(api))
-      return BigInt(ausdData.free.toString())
-    }
-
-    let accountsAUSD = [] as { who: string; after: bigint; before: bigint; diff: bigint }[]
-    for (const who of accountList) {
-      const beforeAUSD = await queryData(beforeBlock, who)
-      const nowAUSD = await queryData(blockNow, who)
-      const diffAUSD = nowAUSD - beforeAUSD
-      console.log(diffAUSD)
-      accountsAUSD.push({ who: who, after: nowAUSD, before: beforeAUSD, diff: diffAUSD })
-    }
-
-    const totalDiffAUSD = accountsAUSD.reduce((prev, curr) => {
-      return prev + curr.diff
-    }, BigInt(0))
-
-    table(accountsAUSD)
-    console.log('totalAUSD accounted for: ', formatBalance(totalDiffAUSD))
-
-    const json = JSON.stringify(accountList, (key, value) => (typeof value === 'bigint' ? value.toString() : value), 2)
-    writeFileSync('ausdAccounts.json', json)
-
-    /*
     // Clean all calls into their respective modules
     const dexTxs = successfulDex.filter((val) => val.section == 'dex');
     const transactionFeeTxs = successfulDex.filter((val) => val.section == 'transactionPayment');
@@ -206,35 +180,27 @@ runner()
     }, 0)
     assert(feeTxLen == transactionFeeTxs.length);
 
-    /*
-    const beforeBlock = 1638215
-    const afterBlock = 1639493
-    const blockNow = (await apiAt.query.system.number()).toNumber()
+    // Clean all incentive Calls
+    const incentivesFiltered = successfulIncentives.filter((val) => val.section == 'incentives');
+    const dexIncentivesTxs = successfulIncentives.filter((val) => val.section == 'dex');
+    const utilityIncentiveTxs = successfulIncentives.filter((val) => val.section == 'utility');
+    const feeIncentiveTxs = successfulIncentives.filter((val) => val.section == 'transactionPayment');
+    const timeIncentiveTxs = successfulIncentives.filter((val) => val.section == 'timestamp');
+    const councilTxs = successfulIncentives.filter((val) => val.section == 'generalCouncil');
 
-    const wallet = new Wallet(api)
+    const filteredAllIncentiveCalls = [utilityIncentiveTxs, incentivesFiltered, feeIncentiveTxs, dexIncentivesTxs, timeIncentiveTxs, councilTxs]
 
-    const tokenNames = {
-      '{"token":"ACA"}': 'ACA',
-      '{"token":"AUSD"}': 'AUSD',
-      '{"token":"DOT"}': 'DOT',
-      '{"token":"LDOT"}': 'LDOT',
-      '{"liquidCrowdloan":13}': 'LCDOT',
-      '{"foreignAsset":3}': 'iBTC',
-      '{"foreignAsset":4}': 'INTR',
-      '{"stableAssetPoolToken":0}': 'tDOT',
-      '{"dexShare":[{"token":"AUSD"},{"foreignAsset":3}]}': 'AUSD/iBTC',
-      '{"dexShare":[{"token":"AUSD"},{"foreignAsset":4}]}': 'AUSD/INTR',
-      '{"dexShare":[{"token":"AUSD"},{"liquidCrowdloan":13}]}': 'AUSD/LCDOT',
-      '{"dexShare":[{"token":"ACA"},{"token":"AUSD"}]}': 'ACA/AUSD',
-      '{"dexShare":[{"token":"AUSD"},{"token":"LDOT"}]}': 'AUSD/LDOT',
-      '{"dexShare":[{"token":"DOT"},{"liquidCrowdloan":13}]}': 'DOT/LCDOT',
-    } as Record<string, string>
+    const incTxLen = filteredAllIncentiveCalls.reduce((prev, curr) => {
+        return prev + curr.length
+    }, 0)
+    assert(incTxLen == successfulIncentives.length)
+    //console.log(util.inspect(successfulIncentives, {showHidden: false, depth: null, colors: true}))
 
-    const stableCurrency = await wallet.getToken(api.consts.cdpEngine.getStableCurrencyId)
+    for (const acc of councilTxs) {
+      accountList.delete(acc)
+    }
 
-    const queryData = async (block: number, address: string) => {
-      const apiAt = await api.at(await api.rpc.chain.getBlockHash(block))
-      let ausdData = await apiAt.
-      return BigInt(ausdData.free.toString())
-    }*/
+    console.log(accountList.size)
+    const json = JSON.stringify(Array.from(accountList), null, 2);
+    writeFileSync('accountsInterest.json', json)
   })

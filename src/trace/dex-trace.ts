@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync} from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 
 import '@acala-network/types'
 import '@acala-network/type-definitions'
@@ -15,7 +15,7 @@ runner()
   .requiredNetwork(['acala'])
   .atBlock()
   .withApiPromise()
-  .run(async ({ api, apiAt}) => {
+  .run(async ({ api, apiAt }) => {
     console.log(`
     iBTC trace
     `)
@@ -28,11 +28,11 @@ runner()
     const stableCurrency = await wallet.getToken(api.consts.cdpEngine.getStableCurrencyId)
 
     const tokenDecimal = {
-        'ACA': 12,
-        'AUSD': 12,
-        'DOT': 10,
-        'INTR': 10,
-        'IBTC': 8,
+      ACA: 12,
+      AUSD: 12,
+      DOT: 10,
+      INTR: 10,
+      IBTC: 8,
     } as Record<string, number>
 
     const mintAddresses = [
@@ -68,61 +68,66 @@ runner()
       '22vfFfhbVhoynjPYHEvg1QRpozx78r6PvNC16aQKDP1fA6rQ',
       '26YvA4eQkGf6NtTYDQ53VhpGgPq1wY2yp9iXP3PY8yTeY4nC',
       '23WGC8YAapwLxz1jpw44NW4VhaQ851KA8d165yahhdWkRJRx',
-      '263cUSPicxPXUD1CgHn81KjLpeCFubzm1EqsFu6bpPZKrpDp'
+      '263cUSPicxPXUD1CgHn81KjLpeCFubzm1EqsFu6bpPZKrpDp',
     ] as string[]
 
     const parachain = {
-        'Moonbeam': '23UvQ3ZQXJ5LfTUSYkcRPkQX2FHgcKxGmqdxYJe9j5e3Lwsi',
-        'Astar': '',
-        'Interlay': '',
+      Moonbeam: '23UvQ3ZQXJ5LfTUSYkcRPkQX2FHgcKxGmqdxYJe9j5e3Lwsi',
+      Astar: '',
+      Interlay: '',
     } as Record<string, string>
 
-    const path = __dirname + '/dex-events.json'
+    const pathDex = __dirname + '/dex-events.json'
+    const pathIncentives = __dirname + '/incentives-events.json'
 
-    const data: any[] = JSON.parse(readFileSync(path, 'utf8'))
-    const successful = data.filter((val) => val.result != 0)
+    const dexData: any[] = JSON.parse(readFileSync(pathDex, 'utf8'))
+    const incentivesData: any[] = JSON.parse(readFileSync(pathIncentives, 'utf-8'))
+    const successfulDex = dexData.filter((val) => val.result != 0)
+    const successfulIncentives = incentivesData.filter((val) => val.result != 0)
+    const allTx = successfulDex.concat(successfulIncentives)
+
     const accountList = new Set<string>()
-    for (const info of successful) {
-        if (info.signer != undefined) {
-            accountList.add(info.signer);
-        }
+    for (const info of allTx) {
+      if (info.signer != undefined) {
+        accountList.add(info.signer)
+      }
     }
 
     const queryData = async (block: number, address: string) => {
       const apiAt = await api.at(await api.rpc.chain.getBlockHash(block))
-      let ausdData = await apiAt.query.tokens.accounts(address, stableCurrency.toCurrencyId(api));
+      let ausdData = await apiAt.query.tokens.accounts(address, stableCurrency.toCurrencyId(api))
       return BigInt(ausdData.free.toString())
     }
 
-    let accountsAUSD = [] as {who: string, after: bigint, before: bigint, diff: bigint}[];
+    let accountsAUSD = [] as { who: string; after: bigint; before: bigint; diff: bigint }[]
     for (const who of accountList) {
-        const beforeAUSD = await queryData(beforeBlock, who);
-        const nowAUSD = await queryData(blockNow, who);
-        const diffAUSD = nowAUSD - beforeAUSD;
-        console.log(diffAUSD)
-        accountsAUSD.push({who: who, after: nowAUSD, before: beforeAUSD, diff: diffAUSD})
+      const beforeAUSD = await queryData(beforeBlock, who)
+      const nowAUSD = await queryData(blockNow, who)
+      const diffAUSD = nowAUSD - beforeAUSD
+      console.log(diffAUSD)
+      accountsAUSD.push({ who: who, after: nowAUSD, before: beforeAUSD, diff: diffAUSD })
     }
 
     const totalDiffAUSD = accountsAUSD.reduce((prev, curr) => {
-        return prev + curr.diff
+      return prev + curr.diff
     }, BigInt(0))
 
-    table(accountsAUSD);
-    console.log("totalAUSD accounted for: ", formatBalance(totalDiffAUSD))
+    table(accountsAUSD)
+    console.log('totalAUSD accounted for: ', formatBalance(totalDiffAUSD))
 
-    const json = JSON.stringify(accountsAUSD, null, 2);
-    writeFileSync('ausdAccounts.json', json);
+    const json = JSON.stringify(accountList, (key, value) => (typeof value === 'bigint' ? value.toString() : value), 2)
+    writeFileSync('ausdAccounts.json', json)
 
     /*
     // Clean all calls into their respective modules
-    const dexTxs = successful.filter((val) => val.section == 'dex');
-    const transactionFeeTxs = successful.filter((val) => val.section == 'transactionPayment');
-    const aggregatedDexTxs = successful.filter((val) => val.section == 'aggregatedDex');
-    const honzonTxs = successful.filter((val) => val.section == 'honzon');
-    const cdpEngineTxs = successful.filter((val) => val.section == 'cdpEngine');
-    const utilityTxs = successful.filter((val) => val.section == 'utility');
-    const democracyTxs = successful.filter((val) => val.section == 'democracy');
-    const vestingTxs = successful.filter((val) => val.section == 'vesting');
+    const dexTxs = successfulDex.filter((val) => val.section == 'dex');
+    const transactionFeeTxs = successfulDex.filter((val) => val.section == 'transactionPayment');
+    const aggregatedDexTxs = successfulDex.filter((val) => val.section == 'aggregatedDex');
+    const honzonTxs = successfulDex.filter((val) => val.section == 'honzon');
+    const cdpEngineTxs = successfulDex.filter((val) => val.section == 'cdpEngine');
+    const utilityTxs = successfulDex.filter((val) => val.section == 'utility');
+    const democracyTxs = successfulDex.filter((val) => val.section == 'democracy');
+    const vestingTxs = successfulDex.filter((val) => val.section == 'vesting');
 
     //console.log(util.inspect(transactionFeeTxs, {showHidden: false, depth: null, colors: true}))
     const filteredTxs = [dexTxs, transactionFeeTxs, aggregatedDexTxs, honzonTxs, cdpEngineTxs, utilityTxs, democracyTxs, vestingTxs]
@@ -134,7 +139,7 @@ runner()
         lenSum += i.length;
     }
     //console.log("Total calls that emitted dex events:", lenSum)
-    assert(lenSum == successful.length);
+    assert(lenSum == successfulDex.length);
 
     // dex module data
     const swapExactSupplyCalls = dexTxs.filter((val) => val.method == 'swapWithExactSupply')
@@ -232,4 +237,4 @@ runner()
       let ausdData = await apiAt.
       return BigInt(ausdData.free.toString())
     }*/
-})
+  })

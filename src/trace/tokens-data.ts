@@ -11,6 +11,8 @@ import { formatBalance, table } from '../log'
 import runner from '../runner'
 import { assert } from 'console'
 import util from 'util'
+import { freemem } from 'os'
+import { BN } from 'bn.js'
 
 runner()
   .requiredNetwork(['acala'])
@@ -25,6 +27,8 @@ runner()
     const afterBlock = 1639493
     const blockNow = (await apiAt.query.system.number()).toNumber()
     const acalaSS58 = 10;
+    const wallet = new Wallet(api)
+    const stableCurrency = await wallet.getToken(api.consts.cdpEngine.getStableCurrencyId)
 
     const tokenDecimal = {
       ACA: 12,
@@ -145,16 +149,19 @@ runner()
     const filteredAccounts = accountsList.filter((val) => !masterList.includes(val));
 
 
-    const queryData = async (block: number, addresses: string[]) => {
-       const apiAt = await api.at(await api.rpc.chain.getBlockHash(block))
-
-       const tokenVals = addresses.map(async (address) => {
-          const native = (await apiAt.query.system.account(address)).data.free
-
-          return {address, native: formatBalance(native)}
-        });
-
-        return Promise.all(tokenVals)
+    const queryData = async (block: number, address: string) => {
+      const tokenData = await api.query.tokens.accounts(address, stableCurrency.toCurrencyId(api))
+      const tokenObj = {free: tokenData.free, reserved: tokenData.reserved, frozen: tokenData.frozen};
+      return tokenObj
     }
+
+    let sum = BigInt(0);
+    for (const account of hardcodedMasterList) {
+      const chuck = await queryData(blockNow, account)
+      console.log(formatBalance(chuck.free));
+      sum += chuck.free.toBigInt()
+    }
+
+    console.log(formatBalance(sum))
 
 });
